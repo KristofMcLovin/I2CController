@@ -31,28 +31,31 @@ communicate with EEPROM devices connected to the FPGA I2C controller along
 with the PMOD Gyro.
 
 The C++ API wrapper consists of five functions:
-1.Configure()
-2.Recieve()
-3.Transmit()
-4.Write8()
-5.Read8()
+1. Configure()
+2. Recieve()
+3. Transmit()
+4. Write8()
+5. Read8()
 
 
-1.Configure() is used to help configure the I2C Controller before executing a command. 
-void Configure(unsigned char length, unsigned char starts, unsigned char stops, const unsigned char *preamble);
-LENGTH -   Length of the preamble in bytes.
-STARTS -   Defines the preamble bytes after which a start bit is 
-		   transmitted. For example, if STARTS=0x04, a start bit is
-		   transmitted after the 3rd preamble byte.
-STOPS -    Defines the preamble bytes after which a stop bit is 
-		   transmitted. For example, if STOPS=0x04, a stop bit is
-		   transmitted after the 3rd preamble byte.
-PREAMBLE - This is a byte(char) data array containing 
+### 1. Configure() 
+Configure() is used to help configure the I2C Controller before executing a command. 
+
+__void Configure(unsigned char length, unsigned char starts, unsigned char stops, const unsigned char *preamble);__
+* LENGTH -   Length of the preamble in bytes.
+* STARTS -   Defines the preamble bytes after which a start bit is 
+		   		 	 transmitted. For example, if STARTS=0x04, a start bit is
+		  		 	 transmitted after the 3rd preamble byte.
+* STOPS -    Defines the preamble bytes after which a stop bit is 
+		  		 	 transmitted. For example, if STOPS=0x04, a stop bit is
+		  		 	 transmitted after the 3rd preamble byte.
+* PREAMBLE - This is a byte(char) data array containing 
 
 An example is as such, lets say that your device requires the following I2C communication for a read:
-*Omitting the acknowledgments and first start bit(HDL handles first start bit). All () parentheses refer to 8 bits(byte).
-(DeviceAddress{Write})(RegisterAddress)(Start)(DeviceAddress{read})(ReadData)(ReadData)......
-
+```c++
+//An example I2C read format is commented below:
+//Omitting the acknowledgments and first start bit. All () parentheses refer to 8 bits(byte).
+//(DeviceAddress{Write})(RegisterAddress)(Start)(DeviceAddress{read})(ReadData)(ReadData)......
 unsigned char preamble[8], starts, stops;
 preamble[0] = 0xA0; // devAddr (write)
 preamble[1] = 0x00; // byteAddress
@@ -60,34 +63,38 @@ preamble[2] = 0xA1; // devAddr (read)
 starts = 0x02;
 stops = 0x00;
 i2c.Configure(3, starts, stops, preamble);
+```
+Typically stops will not be used and remains at zero, but it is added if you require that functionality. \
 
-Typically stops will not be used and remains at zero, but it is added if you require that functionality. 
 
+### 2. Recieve()
+Recieve() executes a receive I2C command after you have done the configuration step above.
 
-2.Recieve() executes a receive I2C command after you have done the configuration step above. 
-void Receive(unsigned char *data, unsigned int length);
-DATA -     Pointer to a byte(char) data array in which to store the data.
-LENGTH -   Defines the amount of data bytes to receive
+__void Receive(unsigned char *data, unsigned int length);__
+* DATA -     Pointer to a byte(char) data array in which to store the data.
+* LENGTH -   Defines the amount of data bytes to receive
 An example:
-
+```c++
 unsigned char data[256];
 i2c.Configure(3, starts, stops, preamble); //Using the same configuration from above.
 i2c.Receive(data, 10);
 for (int i = 0; i < 10; i++) {
 	printf("Read: %02X from memory\n", data[i]);
 }
+```
 
 
+### 3. Transmit()
+Transmit() executes a transmit I2C command after you have done the configuration step above.
 
-3.Transmit() executes a transmit I2C command after you have done the configuration step above.
-void Transmit(const unsigned char *data, unsigned int length);
-DATA -     Pointer to a byte(char) data array containing the data to send.
-LENGTH -   Defines the amount of data bytes to transmit. 
+__void Transmit(const unsigned char *data, unsigned int length);__
+* DATA -     Pointer to a byte(char) data array containing the data to send.
+* LENGTH -   Defines the amount of data bytes to transmit. 
 An example:
-Typical writes will look something like this.
-*Omitting the acknowledgments and first start bit(HDL handles first start bit). All () parentheses refer to 8 bits(byte).
-(DeviceAddress{Write})(RegisterAddress)(WriteData)(WriteData)......
-
+```c++
+//An example I2C write format is commented below:
+//Omitting the acknowledgments and first start bit. All () parentheses refer to 8 bits(byte).
+//(DeviceAddress{Write})(RegisterAddress)(WriteData)(WriteData)......
 unsigned char preamble[8], starts, stops, data[256];
 data[0] = 0xDE;
 data[1] = 0xAD;
@@ -108,42 +115,49 @@ i2c.Transmit(data, 10);
 for (int i = 0; i < 10; i++) {
 	printf("Wrote: %02X to memory\n", data[i]);
 }
+```
 
+### 4. Write()
+Write() is a wrapper function of the above functions created for 8-bit addressing I2C devices.
+If your I2C device uses 8 bit addressing which looks similar to the following:
+```c++
+//An example 8-bit addressing I2C write format is commented below:
+//Omitting the acknowledgments and first start bit. All () parentheses refer to 8 bits(byte).
+//(DeviceAddress{Write})(RegisterAddress)(WriteData)(WriteData)......
+```
+Then the following function can be used to write to this I2C device.
 
-4.Write()is a wrapper function of the above functions created for 8-bit addressing I2C devices.
-If your I2C device uses 8 bit addressing and looks similar to the following:
-*Omitting the acknowledgments and first start bit(HDL handles first start bit). All () parentheses refer to 8 bits(byte).
-(DeviceAddress{Write})(RegisterAddress)(Start)(DeviceAddress{read})(ReadData)(ReadData)......
-
-Then the following function can be used to write to this I2C device. 
-void Write8(const unsigned char devAddr, const unsigned char regAddr, const unsigned char length, const unsigned char *data);
-
-DEVADDR -   Defines the device address. 
-REGADDR -   Defines the register address to write to. 
-LENGTH -    Defines the number of bytes to transmit. 
-DATA - 		This is a byte(char) data array containing the data to send.  
+__void Write8(const unsigned char devAddr, const unsigned char regAddr, const unsigned char length, const unsigned char *data);__
+* DEVADDR -   Defines the device address. 
+* REGADDR -   Defines the register address to write to. 
+* LENGTH -    Defines the number of bytes to transmit. 
+* DATA - 		This is a byte(char) data array containing the data to send.  
 An example:
-
+```c++
 unsigned char data[2];
 data[0] = 0xDE;
 data[1] = 0xAD;
 unsigned char devAddr = 0xD0;
 unsigned char CTRL_REG1 = 0x21;
 i2c.Write8(devAddr, CTRL_REG1, 2, data);
-	
-5. Read()is a wrapper function of the above functions created for 8-bit addressing I2C devices.
+```
+### 5. Read()
+Read() is a wrapper function of the above functions created for 8-bit addressing I2C devices.
 If your I2C device uses 8 bit addressing and looks similar to the following:
-*Omitting the acknowledgments and first start bit(HDL handles first start bit). All () parentheses refer to 8 bits(byte).
-(DeviceAddress{Write})(RegisterAddress)(WriteData)(WriteData)......
+```c++
+//An example 8-bit addressing I2C read format is commented below:
+//Omitting the acknowledgments and first start bit. All () parentheses refer to 8 bits(byte).
+//(DeviceAddress{Write})(RegisterAddress)(Start)(DeviceAddress{read})(ReadData)(ReadData)......
+```
 Then the following function can be used to read from this I2C device. 
-void Read8(const unsigned char devAddr, const unsigned char regAddr, const unsigned char length, unsigned char *data);
 
-DEVADDR -   Defines the device address. 
-REGADDR -   Defines the register address to write to. 
-LENGTH -    Defines the number of bytes to receive. 
-DATA - 		This is a byte(char) data array where the data received is placed. 
+__void Read8(const unsigned char devAddr, const unsigned char regAddr, const unsigned char length, unsigned char *data);__
+* DEVADDR -   Defines the device address. 
+* REGADDR -   Defines the register address to write to. 
+* LENGTH -    Defines the number of bytes to receive. 
+* DATA - 		This is a byte(char) data array where the data received is placed. 
 An example:
-
+```c++
 unsigned char data[2];
 unsigned char devAddr = 0xD0;
 unsigned char CTRL_REG2 = 0x21;
@@ -151,7 +165,7 @@ i2c.Read8(devAddr, CTRL_REG2, 2, data);
 for (int i = 0; i < 2; i++) {
 	printf("Received: %02X from I2C Device\n", data[i]);
 }
-
+```
 
 
 Hardware(HDL)
